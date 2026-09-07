@@ -1,0 +1,41 @@
+# ============================================================
+#  Shorts Hub — Caddy reverse proxy (auto-HTTPS via Let's Encrypt)
+#
+#  TEMPLATE: replace shorts.example.com with your real domain.
+#  Make sure a DNS A record (and optionally AAAA) points this
+#  subdomain at your public IP, and ports 80/443 are forwarded
+#  on your router to this Proxmox host.
+# ============================================================
+
+# Replace this with your actual domain/subdomain
+shorts.example.com {
+	# If you want to lock the public endpoint down (recommended
+	# for a personal app exposed to the internet), uncomment:
+	# basic_auth {
+	#   youruser $2a$14$...   # generate with: caddy hash-password
+	# }
+	# Or IP allowlist:
+	# @allowed not remote_ip 10.0.0.0/8 192.168.0.0/16
+	# handle {
+	#   abort
+	# }
+
+	# All /api/* traffic -> backend
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+
+	# Everything else -> frontend static site
+	handle {
+		reverse_proxy frontend:80
+	}
+
+	header {
+		# Basic security headers
+		-X-Frame-Options "SAMEORIGIN"
+		-Referrer-Policy "strict-origin-when-cross-origin"
+		-X-Content-Type-Options "nosniff"
+		-X-Permitted-Cross-Domain-Policies "none"
+		-Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; media-src 'self' https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; script-src 'self'"
+	}
+}

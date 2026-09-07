@@ -1,0 +1,13 @@
+# Normalize line endings - install.sh must stay LF for Linux/Proxmox
+* text=auto eol=lf
+
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Shell scripts must be LF
+deploy/install.sh text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.ico binary

@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: shortshub-backend
+    env_file: .env
+    environment:
+      - SHORTS_DB=/data/shorts.db
+    volumes:
+      - shortshub-data:/data
+    restart: unless-stopped
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: shortshub-frontend
+    depends_on:
+      - backend
+    restart: unless-stopped
+    expose:
+      - "80"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: shortshub-caddy
+    depends_on:
+      - frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  shortshub-data:
+  caddy-data:
+  caddy-config:
