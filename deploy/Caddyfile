@@ -29,11 +29,11 @@ shorts.example.com {
 	}
 
 	header {
-		# Basic security headers
-		-X-Frame-Options "SAMEORIGIN"
-		-Referrer-Policy "strict-origin-when-cross-origin"
-		-X-Content-Type-Options "nosniff"
-		-X-Permitted-Cross-Domain-Policies "none"
-		-Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; media-src 'self' https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; script-src 'self'"
+		# Basic security headers (note: NO "-" prefix — that would DELETE)
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Content-Type-Options "nosniff"
+		X-Permitted-Cross-Domain-Policies "none"
+		Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; media-src 'self' https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; script-src 'self'"
 	}
 }
