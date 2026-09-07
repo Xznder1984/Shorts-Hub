@@ -107,7 +107,7 @@ async def search(
     if not q.strip():
         raise HTTPException(400, "Query is required")
     results = await aggregator.search(q.strip(), limit=limit, offset=offset)
-    return {"query": q.strip(), "count": len(results), "results": [r.dict() for r in results]}
+    return {"query": q.strip(), "count": len(results), "results": [r.model_dump() for r in results]}
 
 
 @app.get("/api/feed")
@@ -116,7 +116,7 @@ async def feed(
     offset: int = Query(0, ge=0),
 ):
     results = await aggregator.feed(limit=limit, offset=offset)
-    return {"count": len(results), "results": [r.dict() for r in results]}
+    return {"count": len(results), "results": [r.model_dump() for r in results]}
 
 
 @app.get("/api/health")

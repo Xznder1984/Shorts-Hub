@@ -73,11 +73,22 @@ class Aggregator:
                 log.exception("Source %s failed during search", src.name)
                 results = []
             # Store cache
-            await self.cache.set(cache_key, [r.dict() for r in results])
+            await self.cache.set(cache_key, [r.model_dump() for r in results])
             return results
 
         groups = await asyncio.gather(*(run_source(s) for s in sources))
         merged = self._dedupe(self._interleave(groups))
+        if not merged:
+            # Same graceful fallback as feed(): a fresh install (no API keys
+            # yet, or every source errored/blocked) should never show empty
+            # search results when demo content is available.
+            demo = next((s for s in self.sources if s.name == "demo"), None)
+            if demo is not None:
+                try:
+                    merged = await demo.search(query, limit)
+                except Exception:
+                    log.exception("Demo fallback failed during search")
+                    merged = []
         return merged[offset:offset + limit]
 
     async def feed(self, limit: int = 30, offset: int = 0) -> list[VideoItem]:
@@ -101,7 +112,7 @@ class Aggregator:
             except Exception:
                 log.exception("Source %s trending failed", src.name)
                 results = []
-            await self.cache.set(cache_key, [r.dict() for r in results])
+            await self.cache.set(cache_key, [r.model_dump() for r in results])
             return results
 
         # If we have cached searches, use them for a richer feed rather than

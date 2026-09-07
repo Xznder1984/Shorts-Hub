@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.models import VideoItem, VideoSource
 from app.aggregator import Aggregator
+from app.sources.demo import DemoSource
 from app.sources.youtube import YouTubeSource
 
 
@@ -66,3 +67,44 @@ def test_aggregator_empty_interleave():
     assert Aggregator._interleave([[], []]) == []
     only = [VideoItem(id="a", source=VideoSource.YOUTUBE, caption="")]
     assert Aggregator._interleave([[only]]) == [only]
+
+
+def test_demo_source_search_and_trending():
+    import asyncio
+    demo = DemoSource(enabled=True)
+    assert demo.is_available is True
+    all_items = asyncio.run(demo.get_trending(10))
+    assert len(all_items) == 4
+    matches = asyncio.run(demo.search("funny", 10))
+    assert len(matches) >= 1
+    assert all("funny" in (i.caption + " " + " ".join(i.hashtags)).lower() for i in matches)
+    no_match = asyncio.run(demo.search("zzzznothing", 10))
+    assert no_match == []
+
+
+def test_configured_sources_use_demo_fallback(tmp_path):
+    """When all real sources return nothing, aggregator.search should
+    still return demo content (graceful fallback) instead of empty."""
+    import asyncio
+    from app.sources import BaseSource
+    from app.cache import Cache
+
+    class AlwaysDownSource(BaseSource):
+        name = "broken"
+        @property
+        def is_available(self) -> bool:
+            return True
+        async def search(self, query, limit=30):
+            return []
+        async def get_trending(self, limit=30):
+            return []
+
+    demo = DemoSource(enabled=True)
+    cache = Cache(str(tmp_path / "t.db"), ttl_seconds=60)
+    asyncio.run(cache.init())
+    agg = Aggregator([AlwaysDownSource(), demo], cache)
+    result = asyncio.run(agg.search("shorts", limit=10))
+    assert len(result) >= 1
+    assert all(i.source in (VideoSource.YOUTUBE, VideoSource.TIKTOK, VideoSource.INSTAGRAM) for i in result)
+    assert "shorts" in (result[0].caption + " " + " ".join(result[0].hashtags)).lower()
+    asyncio.run(cache.close())
