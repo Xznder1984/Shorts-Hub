@@ -19,6 +19,7 @@
 set -euo pipefail
 
 REPO_URL="https://github.com/Xznder1984/Shorts-Hub.git"
+INSTALL_URL="https://raw.githubusercontent.com/Xznder1984/Shorts-Hub/main/deploy/install.sh"
 INSTALL_DIR="${SHORTS_HUB_DIR:-$HOME/shorts-hub}"
 DOMAIN="${SHORTS_HUB_DOMAIN:-shortshub.example.com}"
 NO_INSTALL_DEPS="${NO_INSTALL_DEPS:-0}"
@@ -193,7 +194,8 @@ ${c_bold}Recommended (security):${c_reset}
   in the Caddyfile before going public. See the README.
 
 ${c_bold}Update the app later:${c_reset}
-  curl -fsSL $REPO_URL | bash   (or re-run this exact installer)
+  cd $INSTALL_DIR && git pull && docker compose up -d --build
+  (or re-run: curl -fsSL $INSTALL_URL | bash)
 ${c_reset}
 EOF
 }

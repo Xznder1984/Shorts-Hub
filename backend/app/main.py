@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from .aggregator import Aggregator
 from .cache import Cache
 from .models import VideoItem, VideoSource
+from .sources.demo import DemoSource
 from .sources.instagram import InstagramSource
 from .sources.tiktok import TikTokSource
 from .sources.youtube import YouTubeSource
@@ -39,7 +40,8 @@ instagram = InstagramSource(
     password=os.getenv("INSTAGRAM_PASSWORD", ""),
     rate_limit_per_minute=RATE_LIMIT,
 )
-aggregator = Aggregator([youtube, tiktok, instagram], cache)
+demo = DemoSource(enabled=os.getenv("DEMO_MODE", "").lower() in ("1", "true", "yes", "on"))
+aggregator = Aggregator([youtube, tiktok, instagram, demo], cache)
 
 
 @asynccontextmanager

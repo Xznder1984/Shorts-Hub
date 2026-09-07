@@ -14,11 +14,9 @@ shorts.example.com {
 	# basic_auth {
 	#   youruser $2a$14$...   # generate with: caddy hash-password
 	# }
-	# Or IP allowlist:
-	# @allowed not remote_ip 10.0.0.0/8 192.168.0.0/16
-	# handle {
-	#   abort
-	# }
+	# Or IP allowlist (LAN hosts pass, everyone else blocked):
+	# @blocked not remote_ip 192.168.0.0/16 10.0.0.0/8
+	# respond @blocked "Forbidden" 403
 
 	# All /api/* traffic -> backend
 	handle /api/* {

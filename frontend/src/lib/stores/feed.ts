@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import type { VideoItem } from '../api/types';
 import { api } from '../api';
 
@@ -9,6 +9,14 @@ export interface FeedState {
 	error: string | null;
 	hasMore: boolean;
 	offset: number;
+}
+
+const PAGE = 30;
+
+function dedupeAppend(existing: VideoItem[], incoming: VideoItem[]): VideoItem[] {
+	const seen = new Set(existing.map((v) => v.id));
+	const fresh = incoming.filter((v) => !seen.has(v.id));
+	return [...existing, ...fresh];
 }
 
 function createFeedStore() {
@@ -26,8 +34,14 @@ function createFeedStore() {
 		async search(q: string) {
 			update((s) => ({ ...s, items: [], query: q, loading: true, error: null, offset: 0, hasMore: true }));
 			try {
-				const res = await api.search(q, 30, 0);
-				update((s) => ({ ...s, items: res.results, loading: false, offset: 30, hasMore: res.results.length >= 30 }));
+				const res = await api.search(q, PAGE, 0);
+				update((s) => ({
+					...s,
+					items: res.results,
+					loading: false,
+					offset: PAGE,
+					hasMore: res.results.length >= PAGE
+				}));
 			} catch (e) {
 				update((s) => ({ ...s, loading: false, error: e instanceof Error ? e.message : 'Search failed' }));
 			}
@@ -35,29 +49,39 @@ function createFeedStore() {
 		async loadFeed() {
 			update((s) => ({ ...s, items: [], query: '', loading: true, error: null, offset: 0, hasMore: true }));
 			try {
-				const res = await api.feed(30, 0);
-				update((s) => ({ ...s, items: res.results, loading: false, offset: 30, hasMore: res.results.length >= 30 }));
+				const res = await api.feed(PAGE, 0);
+				update((s) => ({
+					...s,
+					items: res.results,
+					loading: false,
+					offset: PAGE,
+					hasMore: res.results.length >= PAGE
+				}));
 			} catch (e) {
 				update((s) => ({ ...s, loading: false, error: e instanceof Error ? e.message : 'Feed failed' }));
 			}
 		},
 		async more() {
-			let current: FeedState | undefined;
-			update((s) => ((current = s), s));
-			if (!current || current.loading || !current.hasMore) return;
-			update((s) => ({ ...s, loading: true }));
+			const s = get({ subscribe });
+			if (s.loading || !s.hasMore) return;
+			update((state) => ({ ...state, loading: true }));
 			try {
-				const q = current.query;
-				const res = q ? await api.search(q, 30, current.offset) : await api.feed(30, current.offset);
-				update((s) => ({
-					...s,
-					items: [...s.items, ...res.results],
+				const res = s.query
+					? await api.search(s.query, PAGE, s.offset)
+					: await api.feed(PAGE, s.offset);
+				update((state) => ({
+					...state,
+					items: dedupeAppend(state.items, res.results),
 					loading: false,
-					offset: s.offset + 30,
-					hasMore: res.results.length >= 30
+					offset: state.offset + PAGE,
+					hasMore: res.results.length >= PAGE
 				}));
 			} catch (e) {
-				update((s) => ({ ...s, loading: false, error: e instanceof Error ? e.message : 'Load more failed' }));
+				update((state) => ({
+					...state,
+					loading: false,
+					error: e instanceof Error ? e.message : 'Load more failed'
+				}));
 			}
 		},
 		reset() {

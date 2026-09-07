@@ -96,7 +96,7 @@
 		display: flex;
 		align-items: center;
 		gap: 16px;
-		padding: 10px 16px;
+		padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
 		background: rgba(15, 15, 15, 0.95);
 		backdrop-filter: blur(8px);
 		border-bottom: 1px solid var(--border);

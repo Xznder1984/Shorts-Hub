@@ -336,6 +336,7 @@ Or re-run the one-line installer (it pulls and rebuilds).
 | `BACKEND_PORT` | No | Backend port (default `8000`) — used for local dev |
 | `CACHE_TTL` | No | Cache TTL in seconds (default `10800` = 3h) |
 | `RATE_LIMIT_PER_MINUTE` | No | Outbound requests/min per platform (default `20`) |
+| `DEMO_MODE` | No | `true` = populate the feed with a few static placeholder videos so a fresh install is never empty (default `false`) |
 
 ---
 

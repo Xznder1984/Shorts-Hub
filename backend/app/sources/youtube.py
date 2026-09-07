@@ -124,7 +124,7 @@ class YouTubeSource(BaseSource):
                 original_post_url=f"https://www.youtube.com/watch?v={vid_id}",
                 published_at=self._to_datetime(snippet.get("publishedAt")),
                 duration_seconds=self._parse_iso_duration(duration),
-                embed_url=f"https://www.youtube.com/embed/{vid_id}",
+                embed_url=f"https://www.youtube-nocookie.com/embed/{vid_id}",
                 can_embed=True,
             )
             results.append(video)
@@ -184,7 +184,7 @@ class YouTubeSource(BaseSource):
                 original_post_url=f"https://www.youtube.com/watch?v={vid_id}",
                 published_at=self._to_datetime(snippet.get("publishedAt")),
                 duration_seconds=self._parse_iso_duration(duration),
-                embed_url=f"https://www.youtube.com/embed/{vid_id}",
+                embed_url=f"https://www.youtube-nocookie.com/embed/{vid_id}",
                 can_embed=True,
             )
             results.append(video)

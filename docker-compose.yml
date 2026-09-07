@@ -1,11 +1,11 @@
-version: "3.9"
-
 services:
   backend:
     build:
       context: ./backend
     container_name: shortshub-backend
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false
     environment:
       - SHORTS_DB=/data/shorts.db
     volumes:

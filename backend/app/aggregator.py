@@ -116,8 +116,7 @@ class Aggregator:
                 from_cached = self._dedupe(self._interleave(
                     [[i for i in from_cached if i.source == vs] for vs in VideoSource]
                 ))
-                # Bias to newest by recency? Keep simple - take limit.
-                return from_cached[:limit]
+                return from_cached[offset:offset + limit]
 
         groups = await asyncio.gather(*(run_trending(s) for s in sources))
         merged = self._dedupe(self._interleave(groups))
