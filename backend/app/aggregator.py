@@ -120,4 +120,15 @@ class Aggregator:
 
         groups = await asyncio.gather(*(run_trending(s) for s in sources))
         merged = self._dedupe(self._interleave(groups))
+        if not merged:
+            # Last-resort fallback so a fresh install (no API keys yet, or
+            # all scrapers blocked) still shows a working feed instead of
+            # an empty screen. Demo content is static + safe.
+            demo = next((s for s in self.sources if s.name == "demo"), None)
+            if demo is not None:
+                try:
+                    merged = await demo.get_trending(limit)
+                except Exception:
+                    log.exception("Demo fallback failed")
+                    merged = []
         return merged[offset:offset + limit]

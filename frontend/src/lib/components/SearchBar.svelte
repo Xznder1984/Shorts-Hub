@@ -19,6 +19,8 @@
 		{placeholder}
 		autocomplete="off"
 		autocapitalize="off"
+		autocorrect="off"
+		enterkeyhint="search"
 		spellcheck="false"
 	/>
 	<button type="submit" aria-label="Search" class="go">Search</button>
