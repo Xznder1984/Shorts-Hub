@@ -20,22 +20,32 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-	// Network-first for navigation, cache fallback for offline
+	const url = new URL(event.request.url);
+
+	// Pure network-for-navigation with offline fallback
 	if (event.request.mode === 'navigate') {
 		event.respondWith(
 			fetch(event.request).catch(() => caches.match(event.request).then((r) => r || caches.match('/')))
 		);
 		return;
 	}
+
+	// NEVER cache or intercept API calls — search results must be live.
+	if (url.pathname.startsWith('/api/')) {
+		return; // default network behavior
+	}
+
 	// Cache-first for same-origin static assets
-	if (event.request.url.startsWith(self.location.origin) && event.request.method === 'GET') {
+	if (url.origin === self.location.origin && event.request.method === 'GET') {
 		event.respondWith(
 			caches.match(event.request).then(
 				(cached) =>
 					cached ||
 					fetch(event.request).then((resp) => {
-						const clone = resp.clone();
-						caches.open(CACHE).then((cache) => cache.put(event.request, clone));
+						if (resp.ok) {
+							const clone = resp.clone();
+							caches.open(CACHE).then((cache) => cache.put(event.request, clone));
+						}
 						return resp;
 					})
 			)

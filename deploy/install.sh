@@ -34,6 +34,24 @@ fail()  { printf "%s[ERR]%s %s\n" "$c_red" "$c_reset" "$*"; exit 1; }
 
 require_cmd() { command -v "$1" >/dev/null 2>&1; }
 
+# Safe prompts that never abort under `set -e` — critical for the
+# `curl ... | bash` flow, where stdin is EOF and `read` returns non-zero.
+is_interactive() { [[ -t 0 ]]; }
+
+ask_yn() {
+  if ! is_interactive; then return 1; fi
+  local ans
+  read -rp "$1" ans || return 1
+  [[ "$ans" =~ ^[Yy]$ ]]
+}
+
+ask_value() {
+  if ! is_interactive; then echo ""; return 0; fi
+  local ans
+  read -rp "$1" ans || ans=""
+  printf '%s' "$ans"
+}
+
 # ---------------------------------------------------------------------------
 banner() {
   cat <<EOF
@@ -67,8 +85,7 @@ check_deps() {
     if [[ "$NO_INSTALL_DEPS" == "1" ]]; then
       fail "Dependencies missing. Install them manually, or re-run without NO_INSTALL_DEPS=1"
     fi
-    read -rp "Install missing dependencies with apt? [y/N] " yn
-    if [[ "$yn" =~ ^[Yy]$ ]]; then
+    if ask_yn "Install missing dependencies with apt? [y/N] "; then
       install_deps
     else
       fail "Please install: ${missing[*]}"
@@ -129,8 +146,7 @@ setup_env() {
     warn "You MUST edit .env and add your YOUTUBE_API_KEY (TikTok/Instagram are optional)."
     info "After adding keys, either re-run this installer or:"
     info "  cd $INSTALL_DIR && docker compose up -d --build"
-    read -rp "Do you want to edit .env now? [y/N] " yn
-    if [[ "$yn" =~ ^[Yy]$ ]]; then
+    if ask_yn "Do you want to edit .env now? [y/N] "; then
       if command -v nano >/dev/null 2>&1; then nano .env; else vi .env; fi
     fi
   else
@@ -141,20 +157,27 @@ setup_env() {
 write_caddyfile() {
   info "Configuring Caddy domain..."
   local caddy="$INSTALL_DIR/deploy/Caddyfile"
-  if [[ -f "$caddy" ]]; then
-    if grep -q "shorts.example.com" "$caddy"; then
-      warn "Caddyfile still uses placeholder 'shorts.example.com'."
-      read -rp "Enter your domain (e.g. shorts.example.com), or press Enter to skip: " domain
-      if [[ -n "$domain" ]]; then
-        sed -i "s|shorts\.example\.com|$domain|g" "$caddy"
-        DOMAIN="$domain"
-        ok "Caddyfile set to $domain"
-      else
-        warn "Skipping — you'll need to edit $caddy later."
-      fi
-    else
-      info "Caddyfile already has a custom domain."
-    fi
+  [[ -f "$caddy" ]] || return
+  if ! grep -q "shorts.example.com" "$caddy"; then
+    info "Caddyfile already has a custom domain."
+    return
+  fi
+
+  local domain=""
+  if [[ -n "${SHORTS_HUB_DOMAIN:-}" ]] && [[ "$SHORTS_HUB_DOMAIN" != "shortshub.example.com" ]]; then
+    domain="$SHORTS_HUB_DOMAIN"
+    info "Using domain from SHORTS_HUB_DOMAIN env var."
+  else
+    warn "Caddyfile still uses placeholder 'shorts.example.com'."
+    domain="$(ask_value "Enter your domain (e.g. shorts.example.com), or press Enter to skip: ")"
+  fi
+
+  if [[ -n "$domain" ]]; then
+    sed -i "s|shorts\.example\.com|$domain|g" "$caddy"
+    DOMAIN="$domain"
+    ok "Caddyfile set to $domain"
+  else
+    warn "Skipping — you'll need to edit $caddy later."
   fi
 }
 

@@ -9,7 +9,7 @@
 	{#if video.can_embed && video.embed_url}
 		<div class="media">
 			<iframe
-				src={active ? `${video.embed_url}?autoplay=1&mute=0&playsinline=1` : ''}
+				src={active ? `${video.embed_url}?autoplay=1&mute=1&playsinline=1&rel=0` : ''}
 				title="video player"
 				allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
 				allowfullscreen
@@ -19,10 +19,12 @@
 	{:else if video.video_url}
 		<div class="media">
 			<video
-				src={video.video_url}
+				src={active ? video.video_url : undefined}
 				poster={video.thumbnail_url ?? undefined}
 				controls
 				playsinline
+				autoplay={active}
+				muted={active}
 				controlslist="nodownload"
 				preload={active ? 'metadata' : 'none'}
 			></video>
