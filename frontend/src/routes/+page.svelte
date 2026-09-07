@@ -72,12 +72,12 @@
 		{:else if $feed.error && $feed.items.length === 0}
 			<div class="empty error">
 				<p>{$feed.error}</p>
-				<button onclick={() => ($feed.query ? feed.search($feed.query) : feed.loadFeed())}>Retry</button>
+				<button on:click={() => ($feed.query ? feed.search($feed.query) : feed.loadFeed())}>Retry</button>
 			</div>
 		{:else if $feed.items.length === 0 && !$feed.loading}
 			<div class="empty">
 				<p>No results yet. Try a search above, or load the feed.</p>
-				<button onclick={() => feed.loadFeed()}>Explore feed</button>
+				<button on:click={() => feed.loadFeed()}>Explore feed</button>
 			</div>
 		{:else}
 			<Feed items={$feed.items} onPageEnd={handlePageEnd} />
