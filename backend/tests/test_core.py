@@ -1,0 +1,68 @@
+from __future__ import annotations
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from app.models import VideoItem, VideoSource
+from app.aggregator import Aggregator
+from app.sources.youtube import YouTubeSource
+
+
+def test_parse_iso_duration_seconds():
+    assert YouTubeSource._parse_iso_duration("PT15S") == 15.0
+    assert YouTubeSource._parse_iso_duration("PT1M2S") == 62.0
+    assert YouTubeSource._parse_iso_duration("PT1H5M") == 3900.0
+    assert YouTubeSource._parse_iso_duration("P1DT2H3M4S") == 93784.0
+    assert YouTubeSource._parse_iso_duration("") is None
+    assert YouTubeSource._parse_iso_duration("garbage") is None
+
+
+def test_is_short_duration():
+    assert YouTubeSource._is_short_duration("PT15S") is True
+    assert YouTubeSource._is_short_duration("PT59S") is True
+    assert YouTubeSource._is_short_duration("PT1M0S") is True   # exactly 60s = short
+    assert YouTubeSource._is_short_duration("PT1M1S") is False
+    assert YouTubeSource._is_short_duration("PT10M") is False
+    assert YouTubeSource._is_short_duration("") is False
+
+
+def test_parse_hashtags():
+    tags = YouTubeSource._parse_hashtags("Hello #world #funny, #shorts.")
+    assert "world" in tags
+    assert "funny" in tags
+    assert "shorts" in tags
+    assert len(tags) == 3
+    # Duplicates removed
+    tags = YouTubeSource._parse_hashtags("#a #a #b")
+    assert tags == ["a", "b"]
+
+
+def test_aggregator_interleave():
+    # Two sources with staggered results should round-robin mix
+    group_a = [VideoItem(id=f"a{i}", source=VideoSource.YOUTUBE, caption="") for i in range(5)]
+    group_b = [VideoItem(id=f"b{i}", source=VideoSource.TIKTOK, caption="") for i in range(5)]
+    merged = Aggregator._interleave([group_a, group_b])
+    assert len(merged) == 10
+    sources = [v.source for v in merged]
+    # Should alternate y/t/y/t...
+    assert sources[0] == VideoSource.YOUTUBE
+    assert sources[1] == VideoSource.TIKTOK
+    assert sources[2] == VideoSource.YOUTUBE
+
+
+def test_aggregator_dedupe():
+    items = [
+        VideoItem(id="x", source=VideoSource.YOUTUBE, caption=""),
+        VideoItem(id="x", source=VideoSource.YOUTUBE, caption=""),
+        VideoItem(id="y", source=VideoSource.TIKTOK, caption=""),
+    ]
+    assert len(Aggregator._dedupe(items)) == 2
+
+
+def test_aggregator_empty_interleave():
+    assert Aggregator._interleave([[], []]) == []
+    only = [VideoItem(id="a", source=VideoSource.YOUTUBE, caption="")]
+    assert Aggregator._interleave([[only]]) == [only]

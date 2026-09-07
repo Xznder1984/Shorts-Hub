@@ -13,13 +13,20 @@ services:
     restart: unless-stopped
     expose:
       - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   frontend:
     build:
       context: ./frontend
     container_name: shortshub-frontend
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
     expose:
       - "80"

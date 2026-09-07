@@ -7,28 +7,28 @@
 	import Feed from '$lib/components/Feed.svelte';
 	import { api } from '$lib/api';
 
-	onMount(() => {
-		const q = $page.url.searchParams.get('q');
+	let lastQuery: string | null = null;
+	$: q = $page.url.searchParams.get('q') ?? '';
+
+	// Runs when the ?q= param changes (initial load AND hashtag-link clicks,
+	// which SvelteKit handles as client-side navigation without re-mounting).
+	$: if (q !== lastQuery) {
+		lastQuery = q;
 		if (q) {
 			feed.search(q);
 		} else {
 			feed.loadFeed();
 		}
-	});
-
-	function handleSearch(q: string) {
-		if (q.startsWith('#')) {
-			feed.search(q);
-			goto(`/?q=${encodeURIComponent(q)}`, { replaceState: true });
-			return;
-		}
-		feed.search(q);
-		goto(`/?q=${encodeURIComponent(q)}`, { replaceState: true });
 	}
 
-	function handleTagSearch(tag: string) {
-		// Clicking "#tag" navigates with that hashtag as query
-		handleSearch(tag);
+	function handleSearch(query: string) {
+		const existing = $page.url.searchParams.get('q') ?? '';
+		if (existing === query) {
+			// Same query re-submitted (e.g. re-pressing Enter) — reload explicitly.
+			feed.search(query);
+			return;
+		}
+		goto(`/?q=${encodeURIComponent(query)}`, { replaceState: true });
 	}
 
 	function handlePageEnd() {

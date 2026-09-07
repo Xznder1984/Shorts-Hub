@@ -187,16 +187,60 @@ The frontend is served on the host at port 80 (via Caddy). The API is at `/api/*
 
 These steps assume a **Debian/Ubuntu LXC or VM** on Proxmox with Docker installed.
 
-### 1. Create the LXC/VM
+### 0. VM or CT (LXC)? — recommendation
 
-- Create a container/VM (e.g. Debian 12 LXC, unprivileged) with at least 1–2 GB RAM and a few GB disk.
-- Install Docker inside it:
-  ```bash
-  curl -fsSL https://get.docker.com | sh
-  sudo usermod -aG docker $USER   # log out & back in
-  ```
+**Use an LXC container (CT).** This app is a trusted personal workload (your own code, no
+untrusted images) and you're on a low-power host (E7240, 16 GB RAM). An unprivileged LXC shares
+the host kernel, uses dynamic RAM with near-zero overhead, and boots in seconds. Docker Compose
+works fine inside a modern Proxmox LXC once **nesting** and **keyctl** are enabled.
 
-### 2. Clone the repo
+| | LXC (CT) ✅ recommended | KVM VM |
+|---|---|---|
+| RAM overhead | ~0 (shares host kernel, dynamic limits) | ~300 MB+ reserved for the guest OS |
+| Boot time | seconds | slower (full OS boot) |
+| Isolation | Good (unprivileged, UID-mapped root) | Best (own kernel, hardware boundary) |
+| Docker support | Works with `nesting=1,keyctl=1`; fuse-overlayfs on Debian 12+ | Fully supported, no caveats |
+| Proxmox official stance | Not officially supported (works great for homelab) | Fully supported, live-migration |
+| Best for | **Density / efficiency / low-power hosts** ✅ | Untrusted workloads, production multi-tenant |
+
+**If you'd rather not deal with Docker-in-LXC caveats at all, a small VM (2 vCPU / 2 GB RAM /
+8 GB disk, Debian 12 cloud image) is the "supported" path** — same compose file works unchanged.
+
+### 1. Create the LXC
+
+From the Proxmox shell (or GUI: local template → Debian 13):
+
+```bash
+# Download the Debian template if you haven't
+pveam update
+pveam download local debian-13-standard_13.5-1_amd64.tar.zst
+
+# Create an UNPRIVILEGED container with Docker's required features
+pct create 110 local:vztmpl/debian-13-standard_13.5-1_amd64.tar.zst \
+  --hostname shortshub \
+  --cores 2 \
+  --memory 2048 --swap 512 \
+  --rootfs local-lvm:12 \
+  --net0 name=eth0,bridge=vmbr0,ip=dhcp \
+  --unprivileged 1 \
+  --features nesting=1,keyctl=1
+
+pct start 110
+pct enter 110
+```
+
+> GUI equivalent: **Create CT** → pick Debian 13 template → check **Nesting** and **keyctl**
+> under Options → Features. Unprivileged is the default and correct choice.
+
+Install Docker inside the container:
+
+```bash
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER   # log out & back in (or use sudo docker)
+docker run --rm hello-world     # sanity check
+```
+
+### 2. Clone the repo (skip if you used the installer)
 
 ```bash
 git clone https://github.com/Xznder1984/Shorts-Hub.git ~/shorts-hub
